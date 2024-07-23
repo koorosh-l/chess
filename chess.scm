@@ -1,39 +1,26 @@
 (define-module (chess)
+  #:use-module (utils)
   #:use-module (srfi srfi-9)
   #:use-module (srfi srfi-26)
   #:use-module (srfi srfi-43)
   #:use-module (ice-9 match)
-  #:use-module (ice-9 regex)
   #:use-module (ice-9 control)
   #:export (board? piece?  white? black?
 		   <board>
 		   new-chess-board
-		   chess-ref  lnr
+		   chess-ref
 		   board-get-board   board-set-board!
 		   board-get-height  board-set-height!
 		   board-get-width   board-set-width!
 		   board-get-turn    board-set-turn!
 		   board-get-move-no board-set-move-no!
 		   board-get-history board-set-history!))
-(define DEBUG #t)
-(define-syntax isit?
-  (syntax-rules ()
-    [(_ msg pred obj)
-     (if (not (pred obj))
-	 (error obj msg 'pred))]
-    [(_ msg pred obj obj* ...)
-     (begin
-       (isit? msg pred obj)
-       (isit? msg pred obj* ...))]))
+
 (define (isin? x l)
   (cond
    [(null? l) #f]
    [(equal? x (car l)) #t]
    [else (isin? x (cdr l))]))
-(define-syntax-rule (lnr expr ...)
-  (let ([e (begin expr ...)])
-    (when (defined? DEBUG) (display "----------") (display e) (newline))
-    e))
 ;;board
 (define-record-type <board>
   (_make-board height width turn move-no history)
@@ -87,6 +74,8 @@
     [#\b 'black]
     [#\w 'white]
     [else (display "--------") (display sym) (newline) (error "some how sym is not a pice")]))
+(define-inlinable (pice-class sym)
+  (string->symbol (format #f "~a" (string-ref (symbol->string sym) 1))))
 (define-inlinable (black? sym) (equal? 'black (pice-color sym)))
 (define-inlinable (white? sym) (equal? 'white (pice-color sym)))
 (define-inlinable (captureable brd scl srank i j)
@@ -218,16 +207,16 @@
 	       (filter (iziz? 'h) horsie)))]
     [(brd turn)
      (match-let* ([turn turn]
-	 [(i . j) (pice-index brd (string->symbol (format #f "~ak" (if (black? turn) "b" "w"))))]
-	 [iziz? (lambda (pp)
-		  (lambda (p)
-		    (equal? (string->symbol (format #f "~a~a"
-						    (if (black? turn) "w" "b")
-						    pp))
-			    (chess-ref brd (car p) (cdr p)))))]
-	 [rookie (rook-moves brd i j)]
-	 [horsie (horse-moves brd i j)]
-	 [bishi  (bishop-moves brd i j)])
+		  [(i . j) (pice-index brd (string->symbol (format #f "~ak" (if (black? turn) "b" "w"))))]
+		  [iziz? (lambda (pp)
+			   (lambda (p)
+			     (equal? (string->symbol (format #f "~a~a"
+							     (if (black? turn) "w" "b")
+							     pp))
+				     (chess-ref brd (car p) (cdr p)))))]
+		  [rookie (rook-moves brd i j)]
+		  [horsie (horse-moves brd i j)]
+		  [bishi  (bishop-moves brd i j)])
        (append (filter (iziz? 'r) rookie)
 	       (filter (iziz? 'b) bishi)
 	       (filter (iziz? 'h) horsie)))]))
@@ -240,17 +229,28 @@
       [mover (get-mover (chess-ref brd scl srank))])
     (isin? (cons dcl drank) (mover brd scl srank))))
 (define-inlinable (valid-move? brd mv)
-  (match-let* ([(scl srank dcl drank) mv]
+  (match-let* ([(i1 j1 i2 j2) mv]
       [arr (board-get-board brd)])
-    (and (array-in-bounds? arr scl srank) ;;out'o bound
-	 (array-in-bounds? arr dcl drank)
-	 ;;none move
-	 (not (equal? (chess-ref brd scl srank) 'ee))
+    (and (array-in-bounds? arr i1 j1) ;;out'o bound
+	 (array-in-bounds? arr i2 j2)
+	 (not (empty? brd i1 j1))
+	 (equal? (board-get-turn brd) (pice-color (chess-ref brd i1 j1)))
 	 ;;king killer
-	 (not (equal? (chess-ref brd dcl drank) 'bk))
-	 (not (equal? (chess-ref brd dcl drank) 'wk))
+	 (not (equal? (chess-ref brd i2 j2) 'bk))
+	 (not (equal? (chess-ref brd i2 j2) 'wk))
 	 (legal-move? brd mv))))
-
+;; test get-type
+(define-public (get-type brd mv)
+  (match-let* ([(si sj di dj) mv]
+      [pice (chess-ref brd si sj)]
+      [cls (pice-class pice)]
+      [dir (if (black? pice) 1+ 1-)]
+      [limit (if (black? pice)
+		 7 0)])
+    (cond
+     [(and (equal? cls 'p) (= di limit)) 'promote]
+     [else 'move/aot]))
+  'mv/aot)
 
 ;;unsafe and no policies
 (define occupy
@@ -261,7 +261,10 @@
     [(brd i j p)
      (chess-set! brd p i j)]))
 
-(define (move/aot brd mv)
+(define-public (move/aot brd mv)
   (if (not (valid-move? brd mv))
       #f
       'TBI))
+(define-public (promote brd pice)
+  (board-get-turn brd))
+(define-public (winner . a) 'TBI)
