@@ -14,7 +14,7 @@ exec guile -L /home/quasikote/proj/chess/ -s "$0"
 (let loop ([mv (io:get-move)])
   ;; (display "----------") (write mv) (newline)
   (match (ch:get-type brd mv)
-    ['promote (ch:promot brd (io:get-pice))]
+    ['promote (ch:promote brd (io:get-pice))]
     ['mv/aot (ch:move/aot brd mv)]
     [a (display a) (newline)])
   (io:print-board brd)

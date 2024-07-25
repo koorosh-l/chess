@@ -11,7 +11,11 @@
   (syntax-rules ()
     [(_ msg pred obj)
      (if (not (pred obj))
-	 (error obj msg 'pred))]
+	 (error obj (format #f
+			    "----- ~a : ~a --- ~a"
+			    (module-name (current-module))
+			    (cdar (current-source-location))
+			    obj) 'pred))]
     [(_ msg pred obj obj* ...)
      (begin
        (isit? msg pred obj)

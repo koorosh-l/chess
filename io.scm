@@ -3,7 +3,8 @@
   #:use-module (chess)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 match))
-
+(define-public wrong-pice-msg "wrong pice should be a character one of r,h,b,q\n")
+(define-public wrong-move-msg "wrong input, correct format is: <rank><column><rank><column> character and number in orther\n")
 (define cl-set (list->char-set '(#\a #\b #\c #\d #\e #\f #\g)))
 (define-public (clear)
   (format (current-output-port) "~ac" (integer->char #x1b)))
@@ -19,9 +20,11 @@
 (define-public (get-move)
   (catch 'wrong-move
     (lambda ()
-      (let ([str (string-downcase (get-line (current-input-port)))])
-	(when (or (not (= 4 (string-length str))))
+      (let ([str (get-line (current-input-port))])
+	(when (or (eof-object? str)
+		  (not (= 4 (string-length str))))
 	  (throw 'wrong-move))
+	(string-downcase! str)
 	(let ([scl   (string-ref str 0)]
 	      [srank (string->number (substring str 1 2))]
 	      [dcl   (string-ref str 2)]
@@ -31,18 +34,22 @@
 	  (list (rank->index srank) (cl->index scl)
 		(rank->index drank) (cl->index dcl)))))
     (lambda a
-      (display "wrong input, correct format is: <rank><column><rank><column> character and number in orther\n")
+      (display wrong-move-msg)
       (get-move))))
 (define-public (get-piece)
   (catch 'wrong-pice
     (lambda ()
-      (let* ([str (get-line (current-input-port))]
-	     [p (string->symbol (substring str 0 1))])
-	(if (or (equal? p 'r) (equal? p 'h) (equal? p 'b) (equal? p 'q))
-	    p
-	    (throw 'wrong-pice))))
+      (let* ([str (get-line (current-input-port))])
+	(when (or (eof-object? str)
+		  (not (= (string-length str) 1))
+		  (not (or (string=? str "r")
+			   (string=? str "h")
+			   (string=? str "b")
+			   (string=? str "q"))))
+	  (throw 'wrong-pice))
+	(string->symbol (substring str 0 1))))
     (lambda a
-      (display "wrong pice should be a character one of r,h,b,q") (newline)
+      (display wrong-pice-msg)
       (get-piece))))
 
 (define (sym->unicode sym)
