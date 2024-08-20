@@ -217,22 +217,65 @@
 		 7 0)])
     (cond
      [(and (equal? cls 'p) (= di limit)) 'promote]
-     [else 'move/aot]))
-  'mv/aot)
-
+     [else 'move/aot])))
 ;;unsafe and no policies
 (define occupy
   (case-lambda
     [(brd i1 j1 i2 j2)
-     (chess-set! brd (chess-ref brd i1 i2) i2 j2)
+     (chess-set! brd (chess-ref brd i1 j1) i2 j2)
      (chess-set! brd 'ee i1 j1)]
     [(brd i j p)
      (chess-set! brd p i j)]))
 
 (define-public (move/aot brd mv)
-  (if (not (valid-move? brd mv))
-      #f
-      'TBI))
+  (apply occupy (cons brd mv))
+  (match-let* ([(si sj di dj) mv]
+      [turn (board-get-turn brd)]
+      [piece (chess-ref brd di dj)])
+    (if (and (or (equal? piece 'bp) (equal? piece 'bp)) ;;pawn of the turn color
+	     (and (black? turn) (= di 7))
+	     (and (white? turn) (= di 0)))
+	#t #f)))
 (define-public (promote brd pice)
-  (board-get-turn brd))
+  (let* ([turn (if (equal? (board-get-turn brd) 'white) 'w 'b)]
+	 [pawn (if (white? turn) 'wp 'bp)]
+	 [i (if (white? turn) 0 7)]
+	 [j (let loop ([j 0])
+	      (cond
+	       [(= j 8) (error "no thing to promote to")]
+	       [(equal? (chess-ref brd i j) pawn) j]
+	       [else (loop (1+ j))]))]
+	 [p (string->symbol (format #f "~a~a" turn pice))])
+    (occupy brd i j p)))
+
+(define (possible-moves brd i j)
+  1)
+;;output (('bp (i . j) (i . j)))
+(define (under-attack? brd i j)
+  (match-let* ([($ <board> board _ _ turn _ _) brd]
+      [opp-pices-moves (map (lambda (s)
+			      (let* ([pice (string->symbol (string-append (if (black? turn) "w" "b") (symbol->string s)))])
+				(cons pice
+				      (apply append
+					     (map (match-lambda
+						    [(i . j) ((get-mover pice) brd i j)])
+						  (pice-index brd pice))))))
+			    '(p h b r q k))])
+    (fold (lambda (a b)
+	    (if (null? (cdr a))
+		(let ([fmoves (filter (match-lambda [(a . b) (and (= a i) (= j b))]) (cdr a))])
+		  (if (null? fmoves)
+		      b
+		      (cons (cons (car a)
+				  fmoves)
+			    b)))))
+	  '()
+	  opp-pices-moves)))
+
+(define-public (ended? brd)
+  (match-let* ([($ <board> board height width turn move-no history) brd]
+      [p       (match turn ['white 'wk] ['black 'bk])]
+      [(i . j) (car (pice-index brd p))]
+      [moves   (get-mover p)])
+    (and (under-attack? brd i j) (null? moves))))
 (define-public (winner . a) 'TBI)
