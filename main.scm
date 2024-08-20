@@ -10,14 +10,22 @@ exec guile -L /home/quasikote/proj/chess/ -s "$0"
 	     (ice-9 suspendable-ports))
 
 (define brd (ch:new-chess-board))
+(define-inlinable (get-valid-move brd)
+  (let ([mv (io:get-move)])
+    (if (ch:valid-move? brd mv)
+	mv
+	(begin
+	  (display "invalid move\n")
+	  (get-valid-move brd)))))
+(io:clear)
 (display (io:print-board brd))
-(let loop ([mv (io:get-move)])
-  ;; (display "----------") (write mv) (newline)
-  (match (ch:get-type brd mv)
-    ['promote (ch:promote brd (io:get-pice))]
-    ['mv/aot (ch:move/aot brd mv)]
-    [a (display a) (newline)])
-  (io:print-board brd)
-  (loop (io:get-move)))
+(let gl ([mv (get-valid-move brd)])
+  (if (ch:move/aot brd mv)
+      (ch:promote brd (io:get-piece)))
+  (ch:switch-turn brd)
+  (io:clear)
+  (display (io:print-board brd))
+  (when (not (ch:ended? brd))
+    (gl (get-valid-move brd))))
 
 (display (ch:winner brd))  (newline)
