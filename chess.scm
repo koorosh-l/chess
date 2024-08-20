@@ -5,6 +5,7 @@
   #:use-module (srfi srfi-43)
   #:use-module (ice-9 match)
   #:use-module (ice-9 control)
+  #:use-module ((srfi srfi-1) #:select (fold))
   #:export (board? piece?  white? black?
 		   <board>
 		   new-chess-board
@@ -14,7 +15,8 @@
 		   board-get-width   board-set-width!
 		   board-get-turn    board-set-turn!
 		   board-get-move-no board-set-move-no!
-		   board-get-history board-set-history!))
+		   board-get-history board-set-history!
+		   valid-move? switch-turn))
 
 (define (isin? x l)
   (cond
@@ -96,6 +98,8 @@
 (define-inlinable (opz-clr? brd i1 j1 i2 j2)
   (not (equal? (pice-color (chess-ref brd i1 j1))
 	       (pice-color (chess-ref brd i2 j2)))))
+(define (switch-turn brd)
+  (board-set-turn! brd (if (white? (board-get-turn brd)) 'black 'white)))
 
 (define (pawn-moves brd i j)
   (let* ([pc  (chess-ref brd i j)]
@@ -184,38 +188,6 @@
     (b . ,bishop-moves)
     (q . ,queen-moves)
     (k . ,king-moves)))
-(define checked-by
-  (case-lambda
-    [(brd)
-     (match-let* ([turn (board-get-turn brd)]
-	 [(i . j) (pice-index brd (string->symbol (format #f "~ak" (if (black? turn) "b" "w"))))]
-	 [iziz? (lambda (pp)
-		  (lambda (p)
-		    (equal? (string->symbol (format #f "~a~a"
-						    (if (black? turn) "w" "b")
-						    pp))
-			    (chess-ref brd (car p) (cdr p)))))]
-	 [rookie (rook-moves brd i j)]
-	 [horsie (horse-moves brd i j)]
-	 [bishi  (bishop-moves brd i j)])
-       (append (filter (iziz? 'r) rookie)
-	       (filter (iziz? 'b) bishi)
-	       (filter (iziz? 'h) horsie)))]
-    [(brd turn)
-     (match-let* ([turn turn]
-		  [(i . j) (pice-index brd (string->symbol (format #f "~ak" (if (black? turn) "b" "w"))))]
-		  [iziz? (lambda (pp)
-			   (lambda (p)
-			     (equal? (string->symbol (format #f "~a~a"
-							     (if (black? turn) "w" "b")
-							     pp))
-				     (chess-ref brd (car p) (cdr p)))))]
-		  [rookie (rook-moves brd i j)]
-		  [horsie (horse-moves brd i j)]
-		  [bishi  (bishop-moves brd i j)])
-       (append (filter (iziz? 'r) rookie)
-	       (filter (iziz? 'b) bishi)
-	       (filter (iziz? 'h) horsie)))]))
 (define (get-mover pice-sym)
   (match-let ([(clr nm) (string->list (symbol->string pice-sym))])
     (assoc-ref move-dispatch (string->symbol (format #f "~a" nm)))))
