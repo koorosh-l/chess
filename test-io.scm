@@ -1,6 +1,6 @@
 #! /bin/sh
 # -*- mode: scheme; coding: utf-8 -*-
-exec guile -L /home/quasikote/proj/chess/ -s "$0"
+exec guile -L ./src -s "$0"
 !#
 (use-modules (utils)
 	     (io)
