@@ -3,13 +3,14 @@
 exec guile -L ./src -s "$0"
 !#
 (use-modules ((chess) #:prefix ch:)
+	     ((board) #:prefix brd:)
 	     ((io) #:prefix io:)
 	     (utils)
 	     (ice-9 match)
 	     (ice-9 textual-ports)
 	     (ice-9 suspendable-ports))
 
-(define brd (ch:new-chess-board))
+(define brd (brd:new-chess-board))
 (define-inlinable (get-valid-move brd)
   (let ([mv (io:get-move)])
     (if (ch:valid-move? brd mv)

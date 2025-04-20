@@ -1,6 +1,6 @@
 (define-module (io)
   #:use-module (utils)
-  #:use-module (chess)
+  #:use-module (board)
   #:use-module (ice-9 textual-ports)
   #:use-module (ice-9 match))
 (define-public wrong-pice-msg "wrong pice should be a character one of r,h,b,q\n")
